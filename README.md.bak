@@ -8,7 +8,6 @@ dotnet ef dbcontext scaffold "server=localhost;port=3306;database=demo-mvc;uid=r
 
 Swagger Gen Doc:  Install-Package Swashbuckle.AspNetCore
 
-
 CREATE DATABASE db_demo;
 
 CREATE TABLE `user` (

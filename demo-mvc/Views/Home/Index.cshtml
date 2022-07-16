@@ -1,0 +1,236 @@
+﻿@{
+    ViewData["Title"] = "Home Page";
+}
+
+<div class="text-center">
+    <h1 class="display-4">Welcome</h1>
+    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+    <div class="d-flex justify-content-end">
+        <button type="button" id="add" class="btn btn-success btn-sm px-4">เพิ่ม</button>
+    </div>
+    <div>
+        <table class="table table-striped" id="item_table">
+            <thead>
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">username</th>
+                    <th scope="col">first name</th>
+                    <th scope="col">last name</th>
+                    <th scope="col">phone number</th>
+                    <th scope="col">role id</th>
+                    <th scope="col">action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <template id="item_row">
+            <td class="no"></td>
+            <td class="username"></td>
+            <td class="first_name"></td>
+            <td class="last_name"></td>
+            <td class="phone_number"></td>
+            <td class="role_id"></td>
+            <td>
+                <button type="button" class="btn btn-secondary btn-sm px-4 edit">แก้ไข</button>
+                <button type="button" class="btn btn-danger btn-sm px-4 delete">ลบ</button>
+            </td>
+        </template>
+    </div>
+
+    <div class="modal fade" id="model-insert-update" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Title</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modal">
+                    <form>
+                        <input type="hidden" id="user_id">
+                        <div class="mb-3">
+                            <label for="username" class="d-flex justify-content-start">username:</label>
+                            <input type="text" class="form-control" id="username">
+                        </div>
+                        <div class="mb-3">
+                            <label for="first_name" class="d-flex justify-content-start">first name:</label>
+                            <input type="text" class="form-control" id="first_name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="last_name" class="d-flex justify-content-start">last name:</label>
+                            <input type="text" class="form-control" id="last_name">
+                        </div>
+                        <div class="mb-3">
+                            <label for="phone_number" class="d-flex justify-content-start">phone number:</label>
+                            <input type="text" class="form-control" id="phone_number">
+                        </div>
+                        <div class="mb-3">
+                            <label for="role_id" class="d-flex justify-content-start">role id:</label>
+                            <select class="form-select"  id="role_id" aria-label="Default select example">
+                                <option selected>Open this select menu</option>
+                                <option value="ADMIN">Admin</option>
+                                <option value="SALE">Sale</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="btn-close">Close</button>
+                    <button type="button" class="btn btn-primary" id="btn-save">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="model-confirm-delete" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm delete</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Confirm delete?.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" id="btn-confirm-no" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" id="btn-confirm-yes" class="btn btn-primary">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="/js/api.js"></script>
+<script type="module">
+    import { Delete, GetUserList, InsertOrUpdate } from '/js/api.js'
+    const table = document.querySelector('#item_table')
+    const $modalEdit = $('#model-insert-update')
+    const $modelConfirm = $('#model-confirm-delete')
+    let $delete_id
+
+    async function getTable() {
+      clearTable()
+      const response = await GetUserList()
+      if (response.status !== 200)
+          throw new Error(`Error! status: ${response.status}`);
+
+      const items = response.data
+      for (const item of items) {
+        const newRow = document.createElement('tr')
+        const template = document.querySelector('#item_row')
+        const index = table.rows.length
+
+        const clone = template.content.cloneNode(true)
+        clone.querySelector('.no').innerText = index
+        clone.querySelector('.username').innerText = item.username
+        clone.querySelector('.first_name').innerText = item.first_name
+        clone.querySelector('.last_name').innerText = item.last_name
+        clone.querySelector('.phone_number').innerText = item.phone_number
+        clone.querySelector('.role_id').innerText = item.role_id
+        clone.querySelector('.edit').addEventListener('click', (event) => {
+          openModelEdit(item, 'Edit', true)
+        })
+        clone.querySelector('.delete').addEventListener('click', () => {
+          openConfirmModel(item)
+        })
+        newRow.append(clone)
+        newRow.dataset.user_id = item.user_id
+        table.querySelector('tbody').appendChild(newRow)
+      }
+    }
+    function clearTable() {
+      const rows = document.querySelector('tbody').querySelectorAll('tr')
+      for (const row of rows)
+        row.remove()
+    }
+    document.querySelector('#add').addEventListener('click', (event) => {
+      const item = {
+        user_id: undefined,
+        username: undefined,
+        first_name: undefined,
+        last_name: undefined,
+        phone_number: undefined,
+        role_id: undefined,
+      }
+      openModelEdit(item, 'Add', false)
+    })
+
+    document.querySelector('#btn-save').addEventListener('click', save)
+
+    document.querySelector('#btn-close').addEventListener('click', (event) => {
+      $modalEdit.modal('hide')
+    })
+
+    function openModelEdit(item, title, isReadonly) {
+      $modalEdit.modal('show')
+      $modalEdit.find('.modal-title').html(title)
+      $modalEdit.find('.modal-body #user_id').val(item?.user_id)
+      $modalEdit.find('.modal-body #username').val(item?.username)
+      $modalEdit.find('.modal-body #first_name').val(item?.first_name)
+      $modalEdit.find('.modal-body #last_name').val(item?.last_name)
+      $modalEdit.find('.modal-body #phone_number').val(item?.phone_number)
+      $modalEdit.find('.modal-body #role_id').val(item?.role_id)
+
+      $modalEdit.find('.modal-body #username').prop('readonly', isReadonly)
+    }
+    function openConfirmModel(item) {
+      $modelConfirm.modal('show')
+      $delete_id = item.user_id
+    }
+    const modalConfirm = function (callback) {
+      $('#btn-confirm-yes').on('click', () => {
+        callback(true)
+        $modelConfirm.modal('hide')
+      })
+      $('#btn-confirm-no').on('click', () => {
+        callback(false)
+        $modelConfirm.modal('hide')
+      })
+    }
+    modalConfirm(async (confirm) => {
+      if (confirm) {
+        console.log('CONFIRM')
+        const response = await Delete($delete_id)
+        if (response.status !== 200)
+          throw new Error(`Error! status: ${response.status}`);
+
+        getTable()
+      }
+      else {
+        console.log('NO CONFIRM')
+      }
+    })
+    async function save (){
+        if(isValid())
+        {
+            await insertOrUpdate()
+            await getTable()
+            $modalEdit.modal('hide')
+        }else{
+            alert('Input not valid???')
+        }
+
+      function isValid(){
+          if($modalEdit.find('.modal-body #username').val() !== ''){
+              return true
+          }else{
+              return false
+          }
+      }
+    }
+
+    async function insertOrUpdate() {
+      const item = {
+        user_id: $modalEdit.find('.modal-body #user_id').val(),
+        username: $modalEdit.find('.modal-body #username').val(),
+        first_name: $modalEdit.find('.modal-body #first_name').val(),
+        last_name: $modalEdit.find('.modal-body #last_name').val(),
+        phone_number: $modalEdit.find('.modal-body #phone_number').val(),
+        role_id: $modalEdit.find('.modal-body #role_id').val(),
+      }
+      const response = await InsertOrUpdate(item)
+      if (response.status !== 200)
+          throw new Error(`Error! status: ${response.status}`);
+    }
+    getTable()
+</script>
