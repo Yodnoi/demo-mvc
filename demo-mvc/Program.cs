@@ -14,7 +14,7 @@ builder.Services.AddDbContext<DemoMVCDbContext>(options =>
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
-
+// TESTT
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddCors(x =>
